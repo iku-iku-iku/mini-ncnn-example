@@ -61,13 +61,13 @@ static void qsort_descent_inplace(std::vector<FaceObject>& faceobjects, int left
         }
     }
 
-    #pragma omp parallel sections
+#pragma omp parallel sections
     {
-        #pragma omp section
+#pragma omp section
         {
             if (left < j) qsort_descent_inplace(faceobjects, left, j);
         }
-        #pragma omp section
+#pragma omp section
         {
             if (i < right) qsort_descent_inplace(faceobjects, i, right);
         }
@@ -367,47 +367,14 @@ static int detect_retinaface(const cv::Mat& bgr, std::vector<FaceObject>& faceob
     return 0;
 }
 
-static void draw_faceobjects(const cv::Mat& bgr, const std::vector<FaceObject>& faceobjects)
+static void show_faces(const cv::Mat& bgr, const std::vector<FaceObject>& faceobjects)
 {
     cv::Mat image = bgr.clone();
-
-    for (size_t i = 0; i < faceobjects.size(); i++)
-    {
-        const FaceObject& obj = faceobjects[i];
-
-        fprintf(stderr, "%.5f at %.2f %.2f %.2f x %.2f\n", obj.prob,
-                obj.rect.x, obj.rect.y, obj.rect.width, obj.rect.height);
-
-        cv::rectangle(image, obj.rect, cv::Scalar(0, 255, 0));
-
-        cv::circle(image, obj.landmark[0], 2, cv::Scalar(0, 255, 255), -1);
-        cv::circle(image, obj.landmark[1], 2, cv::Scalar(0, 255, 255), -1);
-        cv::circle(image, obj.landmark[2], 2, cv::Scalar(0, 255, 255), -1);
-        cv::circle(image, obj.landmark[3], 2, cv::Scalar(0, 255, 255), -1);
-        cv::circle(image, obj.landmark[4], 2, cv::Scalar(0, 255, 255), -1);
-
-        char text[256];
-        sprintf(text, "%.1f%%", obj.prob * 100);
-
-        int baseLine = 0;
-        cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
-
-        int x = obj.rect.x;
-        int y = obj.rect.y - label_size.height - baseLine;
-        if (y < 0)
-            y = 0;
-        if (x + label_size.width > image.cols)
-            x = image.cols - label_size.width;
-
-        cv::rectangle(image, cv::Rect(cv::Point(x, y), cv::Size(label_size.width, label_size.height + baseLine)),
-                      cv::Scalar(255, 255, 255), -1);
-
-        cv::putText(image, text, cv::Point(x, y + label_size.height),
-                    cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
-    }
-
-    cv::imshow("image", image);
-    cv::waitKey(0);
+    const FaceObject& obj = faceobjects[0];
+    auto crop = image(obj.rect);
+    cv::Mat resized;
+    cv::resize(crop, resized, {112, 112});
+    cv::imwrite("image.png", resized);
 }
 
 int main(int argc, char** argv)
@@ -430,7 +397,8 @@ int main(int argc, char** argv)
     std::vector<FaceObject> faceobjects;
     detect_retinaface(m, faceobjects);
 
-    draw_faceobjects(m, faceobjects);
+    //draw_faceobjects(m, faceobjects);
+    show_faces(m, faceobjects);
 
     return 0;
 }
